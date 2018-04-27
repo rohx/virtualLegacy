@@ -124,6 +124,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
     var isPlaneHitted : Bool = false
     var isBezierTimerActive : Bool = true
     var isCheckerTimerActive : Bool = true
+    var isPlaneDetectionActive : Bool = false
     // ### Follow config ###
     var bezierPoints = [SCNVector3(),SCNVector3(),SCNVector3(),SCNVector3(),SCNVector3()]
     let bezierDuration = 2.0
@@ -166,9 +167,11 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         self.sceneView.debugOptions = []
         if #available(iOS 11.3, *) {
             self.configuration.planeDetection = [.horizontal]
+            isPlaneDetectionActive = true
         } else {
             // Fallback on earlier versions
             self.configuration.planeDetection = .horizontal
+            isPlaneDetectionActive = true
         }
         self.sceneView.session.run(configuration )
         // Load model nodes
@@ -341,6 +344,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
                         if (hit.node.hasAncestor(planeNode)){
                             self.configuration.planeDetection = []
                             self.sceneView.session.run(configuration)
+                            isPlaneDetectionActive = false
                             print("###### Start virtual legacy ######")
                             VirtualLegacyStarted = true
                             StartVirtualLegacy(position: planeNode.convertPosition(planeNode.position, to: nil))
@@ -528,6 +532,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         //#####################START VERTICAL PLANE DETECTION##########################
         self.configuration.planeDetection = .vertical
         self.sceneView.session.run(configuration)
+        isPlaneDetectionActive = true
     }
     
     /**
@@ -677,15 +682,15 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         isPlaneHitted = true
         let relativeReelPosition = planeNode.position + photoReelPositionOffset
         let relativeAtomPosition = planeNode.position + atomPositionOffset
-        let atomPosition = planeNode.convertPosition(relativeAtomPosition, to: nil)
+        atomPositionOffset = planeNode.convertPosition(relativeAtomPosition, to: nil)
         let reelPosition = planeNode.convertPosition(relativeReelPosition, to: nil)
         
         muralPosition = planeNode.convertPosition(planeNode.position, to: nil)
         //Detects the orientation of the plane and inverts it if it´s backwards
-        print("THIS IS THE ORIENTATION OF THE MURAL: " + String(describing: planeNode.worldOrientation))
-        /*let fixOrientation = planeNode.worldOrientation.w
+        /*print("THIS IS THE ORIENTATION OF THE MURAL: " + String(describing: planeNode.worldOrientation))
+        let fixOrientation = planeNode.worldOrientation.y
         if (fixOrientation < Float(0)){
-            planeNode.worldOrientation.w = (planeNode.worldOrientation.w) * -1
+            planeNode.orientation.w = (planeNode.orientation.w) + .pi
             print("invert vertical plane")
         }*/
         muralOrientation = planeNode.worldOrientation
@@ -718,9 +723,11 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         self.view.hideAllToasts()
         // Explotion instruction
         self.view.makeToast(explotionInstructionText, duration: guiController.infiniteTime, position: .bottom, style: guiController.toastStyleInstruction)
-        atom?.position = atomPosition
+        Timer.scheduledTimer(timeInterval: 3, target: self, selector: #selector(ViewController.positionAtom), userInfo: nil, repeats: false)
     }
-    
+    @objc func positionAtom() {
+        atom!.runAction(SCNAction.move(to: atomPositionOffset, duration: 0.1))
+    }
     /**
      When atom is exploded
      */
@@ -1180,8 +1187,10 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         guard let planeAnchor = anchor as? ARPlaneAnchor else {return}
         //print("New planeanchor added")
         let newPlane = createPlane(planeAnchor: planeAnchor)
-        planeNodes.append(newPlane)
-        node.addChildNode(newPlane)
+        if isPlaneDetectionActive{
+            planeNodes.append(newPlane)
+            node.addChildNode(newPlane)
+        }
     }
     
     /**
@@ -1199,8 +1208,11 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         //print("New planeanchor re-added")
         //print("plane orientation: " + String(describing: newPlane.orientation))
         //print("plane euler angles: " + String(describing: newPlane.eulerAngles))
-        planeNodes.append(newPlane)
-        node.addChildNode(newPlane)
+        if isPlaneDetectionActive{
+            planeNodes.append(newPlane)
+            node.addChildNode(newPlane)
+            print("New planeanchor re-added")
+        }
     }
     
     /**
