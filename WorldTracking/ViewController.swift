@@ -5,11 +5,11 @@
 //  Created by skybotica on 2/2/18.
 //  Copyright © 2018 Skybotica. All rights reserved.
 //
-//VERSION NUEVA DE ABRAHAM
 
 import UIKit
 import ARKit
 import AVFoundation
+import CoreLocation
 import Foundation
 
 struct ModelNode {
@@ -33,7 +33,7 @@ struct PhotoNode {
     var isPlaying : Bool
 }
 
-class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDelegate, AVAudioPlayerDelegate {
+class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDelegate, AVAudioPlayerDelegate, CLLocationManagerDelegate {
     var toggle = true
     var planeImage = 0
     
@@ -48,21 +48,21 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
     var maxDistance = 0.75
     var maxSeconds = 3
     var modelNodes = [
-        ModelNode(name: "MLCDE", distance: 0, node: nil, visibility: true, bitMask : NodeTypes.MLCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.09, toggled: false),
-        ModelNode(name: "LCDE_1", distance: 0.9, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.09, toggled: false),
-        ModelNode(name: "LCDE_2", distance: 0.3, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.10, toggled: false),
-        ModelNode(name: "LCDE_3", distance: 0.6, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.09, toggled: false),
-        ModelNode(name: "LCDE_4", distance: 0.3, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.09, toggled: false),
-        ModelNode(name: "LCDE_5", distance: 0.6, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.09, toggled: false),
-        ModelNode(name: "LCDE_6", distance: 0.3, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.09, toggled: false),
-        ModelNode(name: "LCDE_7", distance: 0.9, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.09, toggled: false)
+        ModelNode(name: "MLCDE", distance: 0, node: nil, visibility: true, bitMask : NodeTypes.MLCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.02, toggled: false),
+        ModelNode(name: "LCDE_1", distance: 0.9, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.02, toggled: false),
+        ModelNode(name: "LCDE_2", distance: 0.3, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.03, toggled: false),
+        ModelNode(name: "LCDE_3", distance: 0.6, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.02, toggled: false),
+        ModelNode(name: "LCDE_4", distance: 0.3, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.02, toggled: false),
+        ModelNode(name: "LCDE_5", distance: 0.6, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.02, toggled: false),
+        ModelNode(name: "LCDE_6", distance: 0.3, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.02, toggled: false),
+        ModelNode(name: "LCDE_7", distance: 0.9, node: nil, visibility: false, bitMask : NodeTypes.LCDE.rawValue, originalPos : nil, movedPos : nil, transitioning: false, backDistance: 0.02, toggled: false)
     ]
     var LoadAllNodes : Bool = true
     var muralScale : Float = 0.1
     var muralPosition : SCNVector3? = nil
-    var muralBackPosition : SCNVector3? = nil
-    var muralForwardPosition : SCNVector3? = nil
     var muralOrientation : SCNVector4? = nil
+    var muralRotation : SCNVector4? = nil
+    var muralAnchor : SCNNode? = nil
     var workTable : SCNNode? = nil
     var VirtualLegacyStarted : Bool = false
     var MuralIsShown : Bool = false
@@ -102,22 +102,28 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
     var voicePhotoOff = "AudioOff512x380"
     var photoReel : SCNNode? = nil
     var photoReelNodes : [PhotoNode] = []
-    var photoReelPositionOffset : SCNVector3 = SCNVector3(2.5, 0, 1)
+    var photoReelPositionOffset : SCNVector3 = SCNVector3(-2.5, 0, -1)
     var atomPositionOffset : SCNVector3 = SCNVector3(0.6, 0.3, 0.3)
     var prevIndexOfPhotoChanged : Int = -1
-    var prevDirectionOfPhotoChanged : Int = 0
     var actualDirectionOfPhotoDragged : Int = 0
-    var photosLimit : Int = 7
-    var radiansPerPhoto : Float = 0.89759790102 // 2pi/7
+    var photosLimit : Int = 6
+    var photosOffsetPositive : Int = 3
+    var photosOffsetNegative : Int = 3
+    var radiansPerPhoto : Float = 1.0471975512 // 2pi/6
+    var radiansStep : Float = 0.0174533 // 1 degree to radian
+    var radiansError : Float = 0.0174533 // step
     var photoReelRotationAction : SCNAction? = nil
     var prevXdiffPan : CGFloat = 0
-    var nextPhotoReelAngle : Float = 0.89759790102
-    var prevPhotoReelAngle : Float = -0.89759790102
+    var nextPhotoReelAngle : Float = 1.0471975512
+    var prevPhotoReelAngle : Float = -1.0471975512
+    var threadRunning : Bool = false
     // ### Tapped info ###
     var prevPan = CGPoint()
     // ### Scene configuration ###
     @IBOutlet weak var sceneView: ARSCNView!
     let configuration = ARWorldTrackingConfiguration()
+    let locationManager = CLLocationManager()
+    var userLocation = CLLocation()
     // ### Flags ###
     var isAtomMoving : Bool = false
     var isAtomTapped : Bool = false
@@ -164,21 +170,15 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
     // ############################## Load information ##############################
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.sceneView.debugOptions = []
-        if #available(iOS 11.3, *) {
-            self.configuration.planeDetection = [.horizontal]
-            isPlaneDetectionActive = true
-        } else {
-            // Fallback on earlier versions
-            self.configuration.planeDetection = .horizontal
-            isPlaneDetectionActive = true
-        }
-        self.sceneView.session.run(configuration )
+        // Start location services
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.requestWhenInUseAuthorization()
+        
         // Load model nodes
         LoadNodes()
         // Assign scene view delegate as self for handling plane detection
         sceneView.delegate = self
-        //self.sceneView.scene.physicsWorld.contactDelegate = self
         
         // Assign tap gesture handler
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap))
@@ -189,9 +189,6 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         // Assign pan gesture handler
         let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan))
         self.sceneView.addGestureRecognizer(panGestureRecognizer)
-        // Assign swipe gesture handler
-        let swipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe))
-        self.sceneView.addGestureRecognizer(swipeGestureRecognizer)
         // Set referenceNode of pointOfView of the scene
         referenceNode = self.sceneView.pointOfView
         // Loads Audio
@@ -210,6 +207,26 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         
         // Initial instruction
         self.view.makeToast(horizontalPlaneInstructionText, duration: guiController.infiniteTime, position: .bottom, style: guiController.toastStyleInstruction)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        // Scene configuration
+        self.sceneView.debugOptions = []
+        if #available(iOS 11.3, *) {
+            self.configuration.planeDetection = [.horizontal]
+            isPlaneDetectionActive = true
+        } else {
+            // Fallback on earlier versions
+            self.configuration.planeDetection = .horizontal
+            isPlaneDetectionActive = true
+        }
+        //self.configuration.worldAlignment = .gravityAndHeading JATJ
+        self.sceneView.session.run(configuration )
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        // Pause the view's session
+        self.sceneView.session.pause()
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -313,7 +330,6 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
                 if(!atomHasFollowed){
                     isAtomTapped = true
                     if(isBezierTimerActive){
-                        // JATJ: Start following when tap
                         atomResetPositions![4] = atom!.position
                         bezierPoints[4] = atom!.position
                         tActual = 1.0
@@ -493,7 +509,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
     @objc func handlePan(sender: UIPanGestureRecognizer) {
         let sceneViewTapped = sender.view as! SCNView
         let tapCoords = sender.location(in: sceneViewTapped)
-        let bitMask = NodeTypes.atom.rawValue | NodeTypes.photo.rawValue
+        let bitMask = NodeTypes.atom.rawValue | NodeTypes.photoReelSphere.rawValue
         let hitTest = sceneViewTapped.hitTest(tapCoords, options: [SCNHitTestOption.categoryBitMask : bitMask])
         if(hitTest.isEmpty){
             // No touch any node
@@ -507,23 +523,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
             isAtomMoving = false
         }
     }
-    
-    @objc func handleSwipe(sender: UISwipeGestureRecognizer) -> Void {
-        if sender.direction == UISwipeGestureRecognizerDirection.right {
-            print("Swipe Right")
-        }
-        else if sender.direction == UISwipeGestureRecognizerDirection.left {
-            print("Swipe Left")
-        }
-        else if sender.direction == UISwipeGestureRecognizerDirection.up {
-            print("Swipe Up")
-        }
-        else if sender.direction == UISwipeGestureRecognizerDirection.down {
-            print("Swipe Down")
-        }
-        print("Swiping")
-    }
-    
+
     func startVerticalPlanes(){
         print("vertical planes started")
         self.view.hideAllToasts()
@@ -550,10 +550,10 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
             if(result.node.hasAncestor(photoReel!)){
                 photoReel!.removeAction(forKey: "SwipeReel")
                 if(sender.state == UIGestureRecognizerState.ended){
-                    print("######### GESTURE ENDED #############")
-                    print(prevXdiffPan)
+                    //print("######### GESTURE ENDED #############")
+                    //print(prevXdiffPan)
                     //photoReel!.runAction(SCNAction.rotateBy(x: 0, y: CGFloat(radiansPerPhoto/2.0)*CGFloat(actualDirectionOfPhotoDragged), z: 0, duration: TimeInterval(0.25)), forKey: "SwipeReel")
-                    checkTurnPhotoReel(radians: photoReel!.eulerAngles.y)
+                    //checkTurnPhotoReel(radians: photoReel!.eulerAngles.y)
                     return
                 }
                 
@@ -566,7 +566,7 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
                     degrees = -1
                 }
                 actualDirectionOfPhotoDragged = Int(degrees)
-                photoReel!.eulerAngles = SCNVector3((photoReel!.eulerAngles.x), (photoReel!.eulerAngles.y + Float(degrees.degreesToRadians)), photoReel!.eulerAngles.z)
+                photoReel!.eulerAngles = photoReel!.eulerAngles + SCNVector3(0,1,0) * degrees * radiansStep
                 checkTurnPhotoReel(radians: photoReel!.eulerAngles.y)
                 prevPan.x = tapCoords.x;
                 prevPan.y = tapCoords.y;
@@ -611,7 +611,9 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         }
     }
     
-    //##################PINCH GESTURE FUNCTION (agrandar modelo)#############################
+    /**
+     Executed when pinching the screen
+     */
     @objc func handlePinch(sender: UIPinchGestureRecognizer, position: SCNVector3){
         let viewNode = self.sceneView.scene.rootNode.childNode(withName: "Table", recursively: false)
         let auditorio = self.sceneView.scene.rootNode.childNode(withName: "Edificio", recursively: true)
@@ -679,24 +681,19 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
     */
     func AtomExplotion(planeNode : SCNNode){
         print("###### Atom explotion ######")
+        
         isPlaneHitted = true
-        let relativeReelPosition = planeNode.position + photoReelPositionOffset
+        muralPosition = planeNode.convertPosition(planeNode.position, to: nil)
+        muralOrientation = planeNode.worldOrientation
+        muralRotation = planeNode.rotation
+        muralAnchor = planeNode.parent
+        
         let relativeAtomPosition = planeNode.position + atomPositionOffset
         atomPositionOffset = planeNode.convertPosition(relativeAtomPosition, to: nil)
-        let reelPosition = planeNode.convertPosition(relativeReelPosition, to: nil)
         
-        muralPosition = planeNode.convertPosition(planeNode.position, to: nil)
-        //Detects the orientation of the plane and inverts it if it´s backwards
-        /*print("THIS IS THE ORIENTATION OF THE MURAL: " + String(describing: planeNode.worldOrientation))
-        let fixOrientation = planeNode.worldOrientation.y
-        if (fixOrientation < Float(0)){
-            planeNode.orientation.w = (planeNode.orientation.w) + .pi
-            print("invert vertical plane")
-        }*/
-        muralOrientation = planeNode.worldOrientation
         // Empty vertical planes
-        for planeNode in planeNodes{
-            planeNode.removeFromParentNode()
+        for planeNodeI in planeNodes{
+            planeNodeI.removeFromParentNode()
         }
         
         // Add exploding atom
@@ -708,15 +705,8 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         Timer.scheduledTimer(timeInterval: TimeInterval(0.5 + Double(explotionDuration)), target: self, selector: #selector(ViewController.AtomExploded), userInfo: nil, repeats: false)
         self.AddModelNode(nil)
         // Show photo reel
-        self.generatePhotoReel(photos: self.photoNames, center: reelPosition, photoWidth: 0.6, photoHeight: 0.4, padding: 0.1)
-        /*atom!.runAction(SCNAction.move(to: atomPosition, duration: 0.1), completionHandler: {
-            // Add mural to the view
-            self.AddModelNode(nil)
-            self.atom?.position = atomPosition
-            
-            // Show photo reel
-            self.generatePhotoReel(photos: self.photoNames, center: reelPosition, photoWidth: 0.6, photoHeight: 0.4, padding: 0.1)
-        })*/
+        self.generatePhotoReel(photos: self.photoNames, photoWidth: 0.6, photoHeight: 0.4, padding: 0.1)
+
         // Plays voice
         apVoice.play()
         
@@ -885,36 +875,35 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
      */
     func AddModelNode(sender : Any?, i : Int){
         print("Loading all nodes: ",i)
+        
+        // Add model to scene JATJ: mural anchor
+        muralAnchor?.addChildNode(modelNodes[i].node!)
+        modelNodes[i].node!.position = SCNVector3(0,0,0)
+        modelNodes[i].node!.eulerAngles = SCNVector3(-Double.pi/2,0,Double.pi)
+        
         modelNodes[i].node!.scale = SCNVector3(muralScale,muralScale,muralScale)
-        modelNodes[i].node!.orientation = muralOrientation!
-        modelNodes[i].node!.position = muralPosition!
-        modelNodes[i].node!.eulerAngles = modelNodes[i].node!.eulerAngles + SCNVector3(0,Double.pi,0)
         
         // Scale animation
         let originalScale = modelNodes[i].node!.scale
         modelNodes[i].node!.scale = SCNVector3(0,0,0)
         modelNodes[i].node!.runAction(SCNAction.scale(to: CGFloat(originalScale.x), duration: TimeInterval(explotionDuration)))
         
-        let front = modelNodes[i].node!.orientation * SCNVector3Make(0, 0, -1)
-        let frontVec = SCNVector3(front.x,0,front.z)
+        let frontVec = (modelNodes[i].node!.orientation * SCNVector3(0,0,-1)).normalized
         
-        muralBackPosition = modelNodes[i].node!.position + (frontVec * Float(-modelNodes[i].backDistance))
-        muralForwardPosition = modelNodes[i].node!.position + (frontVec * Float(maxDistance))
+        let muralBackPosition = modelNodes[i].node!.position + (frontVec * Float(-modelNodes[i].backDistance))
+        let muralForwardPosition = modelNodes[i].node!.position + (frontVec * Float(maxDistance))
         
         // If node is not the main model
         if(modelNodes[i].bitMask == NodeTypes.LCDE.rawValue){
             // Move back image
-            modelNodes[i].node!.position = muralBackPosition!
+            modelNodes[i].node!.position = muralBackPosition
             
             modelNodes[i].originalPos = modelNodes[i].node!.position
             
-            modelNodes[i].movedPos = (muralForwardPosition! - muralBackPosition!) * modelNodes[i].distance
+            modelNodes[i].movedPos = (muralForwardPosition - muralBackPosition) * modelNodes[i].distance
             
             modelNodes[i].visibility = false
         }
-        
-        // Add model to scene
-        self.sceneView.scene.rootNode.addChildNode(modelNodes[i].node!)
     }
     
     /**
@@ -990,7 +979,6 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
         photoReel?.removeFromParentNode()
         photoReel = nil
         prevIndexOfPhotoChanged = -1
-        prevDirectionOfPhotoChanged = 0
         actualDirectionOfPhotoDragged = 0
         for (i, _) in photoReelNodes.enumerated(){
             photoReelNodes[i].node.removeFromParentNode()
@@ -1241,16 +1229,45 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
          - padding: Float defines the padding of a simple photo in meters
      - returns:
      */
-    func generatePhotoReel(photos: Array<String>, center : SCNVector3, photoWidth : Float, photoHeight : Float, padding : Float){
+    func generatePhotoReel(photos: Array<String>, photoWidth : Float, photoHeight : Float, padding : Float){
         if(photoReel != nil){
             return
         }
+        // JATJ: muralAnchor
+        let photoReelParent = SCNNode()
+        photoReel = SCNNode()
+        muralAnchor?.addChildNode(photoReelParent)
+        
+        // Calculation of radians
+        let referenceVector = SCNVector3(0,1,0)
+        let upVector = photoReelParent.orientation * referenceVector
+        let absoluteUpVector = photoReelParent.convertVector(upVector, from: nil)
+        
+        // Calculate z radians
+        let absoluteUpVectorXY = SCNVector3(absoluteUpVector.x,absoluteUpVector.y,0)
+        let angleZ = acos(referenceVector.dotProduct(absoluteUpVectorXY) / (referenceVector.magnitude * absoluteUpVectorXY.magnitude))
+        // Calculate x radians
+        let absoluteUpVectorZY = SCNVector3(absoluteUpVector.z,absoluteUpVector.y,0)
+        let angleX = acos(referenceVector.dotProduct(absoluteUpVectorZY) / (referenceVector.magnitude * absoluteUpVectorZY.magnitude))
+        
+        photoReelParent.eulerAngles = photoReel!.eulerAngles + SCNVector3(-angleX, 0, -angleZ)
+        
+        photoReelParent.addChildNode(photoReel!)
+        photoReel!.eulerAngles = SCNVector3(0, Double.pi, 0)
+        photoReel!.position = photoReel!.orientation * photoReelPositionOffset
+        
+        
         let radius = (photoWidth + padding)
         let radianInc = (360/photosLimit).degreesToRadians
         
-        photoReel = SCNNode()
-        for (index, photo) in photos.enumerated(){
+        for (index, _) in photos.enumerated(){
             if(index >= photosLimit){break}
+            var i = index
+            if(index > photosLimit/2){
+                // Move to last photos
+                i = photos.count - (photosLimit - index)
+            }
+            let photo = photos[i]
             // Photo Node
             let photoNode = SCNNode(geometry: SCNPlane(width: CGFloat(photoWidth), height: CGFloat(photoHeight)))
             photoNode.geometry?.firstMaterial?.diffuse.contents = UIImage(named: photo)
@@ -1282,26 +1299,18 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
             voiceNode.position = voiceNode.position - (voiceNode.worldFront * 0.01)
             
             // Add nodes to reel
-            photoReelNodes.append(PhotoNode(photoName: photo, audioName: photoAudios[index+1], node: photoNode, voiceNode: voiceNode, isPlaying : false ))
+            photoReelNodes.append(PhotoNode(photoName: photo, audioName: photoAudios[i+1], node: photoNode, voiceNode: voiceNode, isPlaying : false ))
             photoReel!.addChildNode(photoNode)
             photoReel!.addChildNode(voiceNode)
             photoReel!.addChildNode(backNode)
         }
-        photoReel!.position = center
-        // JATJ: photoreel bugs
-        // X
-        let referenceReel = SCNNode(geometry:SCNBox(width: 1, height: 0.1, length: 0.1, chamferRadius: 0))
-        referenceReel.geometry?.firstMaterial?.diffuse.contents = UIColor.red
-        photoReel?.addChildNode(referenceReel)
-        referenceReel.position = SCNVector3(0,0,0)
-        // Z
-        let referenceReel1 = SCNNode(geometry:SCNBox(width: 0.1, height: 0.1, length: 1, chamferRadius: 0))
-        referenceReel1.geometry?.firstMaterial?.diffuse.contents = UIColor.blue
-        photoReel?.addChildNode(referenceReel1)
-        referenceReel.position = SCNVector3(0,0,0)
-        
-        photoReel!.eulerAngles = SCNVector3(0,modelNodes[0].node!.eulerAngles.y,0)
-        sceneView.scene.rootNode.addChildNode(photoReel!)
+        // Invisible sphere
+        let cylinder = SCNNode(geometry:SCNCylinder(radius: 0.6+0.90, height: 0.4))
+        cylinder.geometry?.firstMaterial?.diffuse.contents = UIColor.init(red:CGFloat(0.0),green:CGFloat(0.0),blue:CGFloat(0.0),alpha:CGFloat(0.0)).cgColor
+        cylinder.geometry?.firstMaterial?.colorBufferWriteMask = SCNColorMask.alpha
+        photoReel?.addChildNode(cylinder)
+        SetCategoryMask(node: cylinder, mask: NodeTypes.photoReelSphere.rawValue)
+        cylinder.position = SCNVector3(0,0,0)
     }
     
     /**
@@ -1324,32 +1333,34 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
      - returns:
      */
     func checkTurnPhotoReel(radians : Float){
-        let resetRadian : Float = 0//radiansPerPhoto * Float(Int(photosLimit/2))
-        
-        let diff = abs(radians) - resetRadian
+        let resetRadian : Float = .pi
+        let diff = abs(abs(radians) - resetRadian)
         if(diff < 0){return}
-        
-        let n = Int((abs(radians) - resetRadian)/radiansPerPhoto) + photosLimit + 1
-        let indexPhotoReel = Int((abs(radians) - resetRadian)/radiansPerPhoto) % photosLimit
-        if(n != prevIndexOfPhotoChanged){
-            iterateOverPhotos(indexPhotoReel: indexPhotoReel, n:n)
-        }else if(actualDirectionOfPhotoDragged != prevDirectionOfPhotoChanged){
-            iterateOverPhotos(indexPhotoReel: indexPhotoReel, n:n)
-        }
-    }
-    func iterateOverPhotos(indexPhotoReel : Int, n : Int){
-        prevDirectionOfPhotoChanged = actualDirectionOfPhotoDragged
-        if(actualDirectionOfPhotoDragged > 0){
-            changePhoto(node : photoReelNodes[indexPhotoReel].node, name : photoNames[n%photoNames.count])
-            photoReelNodes[indexPhotoReel].audioName = photoAudios[(n%(photoAudios.count-1))+1]
-            nextPhotoReelAngle += radiansPerPhoto
-            prevPhotoReelAngle += radiansPerPhoto
+        let error = radiansPerPhoto * (1 - ((abs(radians) / radiansPerPhoto) - Float(Int(abs(radians) / radiansPerPhoto))))
+        if(error > radiansError){ return }
+        // Indexes for change photo
+        var n : Int?
+        var photoIndex : Int?
+        var voiceIndex : Int?
+        var indexPhotoReel : Int?
+        // Get indexes
+        if(self.actualDirectionOfPhotoDragged > 0 ){
+            n = (Int(diff/radiansPerPhoto) + photosOffsetPositive)
+            indexPhotoReel = (((n! - photosOffsetPositive)%photosLimit) + photosOffsetPositive) % photosLimit
+            photoIndex = n!%photoNames.count
+            voiceIndex = (photoIndex! + 1) % photoAudios.count
+            print("PHOTO CHANGE +", radians, diff, error, n!, indexPhotoReel!, photoIndex!, voiceIndex!)
         }else{
-            changePhoto(node : photoReelNodes[indexPhotoReel].node, name : photoNames[(n-1)%photoNames.count])
-            photoReelNodes[indexPhotoReel].audioName = photoAudios[((n-1)%(photoAudios.count-1))+1]
-            nextPhotoReelAngle -= radiansPerPhoto
-            prevPhotoReelAngle -= radiansPerPhoto
+            let diff = abs(radians - .pi)
+            n = (Int(diff/radiansPerPhoto) + photosOffsetPositive)
+            indexPhotoReel = (((n! - photosOffsetPositive)%photosLimit) + photosOffsetPositive) % photosLimit
+            indexPhotoReel = (indexPhotoReel! != 0) ? photosLimit - indexPhotoReel! : 0
+            photoIndex = (n!%photoNames.count != 0) ? photoNames.count - n!%photoNames.count : 0
+            voiceIndex = (photoIndex! + 1) % photoAudios.count
+            print("PHOTO CHANGE -", radians, diff, error, n!, indexPhotoReel!, photoIndex!, voiceIndex!)
         }
+        changePhoto(node : photoReelNodes[indexPhotoReel!].node, name : photoNames[photoIndex!])
+        photoReelNodes[indexPhotoReel!].audioName = photoAudios[voiceIndex!]
     }
     /**
      Changes audio icon to off in the photo reel
@@ -1592,14 +1603,15 @@ class ViewController: UIViewController, ARSCNViewDelegate, SCNPhysicsContactDele
 // ############################## Enums ##############################
 // Physics bit masks
 enum NodeTypes: Int {
-    case any =        0b0000000000000001
-    case atom =       0b0000000000000010
-    case photo =      0b0000000000000100
-    case target =     0b0000000000001000
-    case bullet =     0b0000000000010000
-    case MLCDE =      0b0000000000100000
-    case LCDE =       0b0000000001000000
-    case photoVoice = 0b0000000010000000
+    case any =                  0b0000000000000001
+    case atom =                 0b0000000000000010
+    case photo =                0b0000000000000100
+    case target =               0b0000000000001000
+    case bullet =               0b0000000000010000
+    case MLCDE =                0b0000000000100000
+    case LCDE =                 0b0000000001000000
+    case photoVoice =           0b0000000010000000
+    case photoReelSphere =      0b0000000100000000
 }
 
 // MARK: Extensions

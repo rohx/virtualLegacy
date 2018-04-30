@@ -10,13 +10,13 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "WorldTracking/ViewController.swift"
-            timestampString = "546540362.267835"
+            timestampString = "546759887.294646"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1397"
-            endingLineNumber = "1397"
-            landmarkName = "addAtom()"
-            landmarkType = "7">
+            startingLineNumber = "1409"
+            endingLineNumber = "1409"
+            landmarkName = "ViewController"
+            landmarkType = "3">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -26,11 +26,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "WorldTracking/ViewController.swift"
-            timestampString = "546540362.268409"
+            timestampString = "546759887.2951241"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1503"
-            endingLineNumber = "1503"
+            startingLineNumber = "1515"
+            endingLineNumber = "1515"
             landmarkName = "atomFollow()"
             landmarkType = "7">
          </BreakpointContent>
@@ -42,12 +42,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "WorldTracking/ViewController.swift"
-            timestampString = "546540362.268652"
+            timestampString = "546759887.295475"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1415"
-            endingLineNumber = "1415"
-            landmarkName = "atomCheck()"
+            startingLineNumber = "1427"
+            endingLineNumber = "1427"
+            landmarkName = "addAtom()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -58,12 +58,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "WorldTracking/ViewController.swift"
-            timestampString = "546540362.268891"
+            timestampString = "546759887.295782"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "1446"
-            endingLineNumber = "1446"
-            landmarkName = "atomStartFollow()"
+            startingLineNumber = "1458"
+            endingLineNumber = "1458"
+            landmarkName = "atomCheck()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

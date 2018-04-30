@@ -28,6 +28,8 @@
 	<string>Se requiere guardar capturas de pantalla en el carrete de fotos</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Se requiere guardar capturas de pantalla en el carrete de fotos</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Se requiere el GPS para la orientación de la escena virtual</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
